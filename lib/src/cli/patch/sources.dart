@@ -166,6 +166,8 @@ Future<Map<String, Object?>> remapSources(
     }
     final target = p.join(destination, name);
     await Directory(target).create(recursive: true);
+    // A package may ship no lib/ (cupertino_icons 1.0.9 carries only fonts).
+    if (!await source.exists()) continue;
     await for (final entity in source.list(
       recursive: true,
       followLinks: false,

@@ -109,7 +109,8 @@ class BytecodeProducer implements CodeProducer {
         : null;
     for (final name in own) {
       final root = roots[name] as Uri?;
-      if (root == null) continue;
+      // A package may ship no lib/ (cupertino_icons 1.0.9 carries only fonts).
+      if (root == null || !await Directory.fromUri(root).exists()) continue;
       await for (final entity in Directory.fromUri(
         root,
       ).list(recursive: true, followLinks: false)) {
