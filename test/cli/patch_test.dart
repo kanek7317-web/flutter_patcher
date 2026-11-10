@@ -85,6 +85,40 @@ void main() {
       );
     },
   );
+  test(
+    'package URI rewriting skips a module package that ships no lib/',
+    () async {
+      // cupertino_icons 1.0.9 carries only fonts: its package root has no
+      // lib/, yet a whole-tier patch counts it among the module packages.
+      final root = (await Directory.systemTemp.createTemp('patch-nolib-')).path;
+      await Directory(p.join(root, 'app', 'lib')).create(recursive: true);
+      await File(p.join(root, 'app/lib/main.dart'))
+          .writeAsString("import 'package:fonts/fonts.dart';");
+      await Directory(p.join(root, 'fonts', 'assets')).create(recursive: true);
+      final config = p.join(root, 'config.json');
+      await writeObject(config, {
+        'configVersion': 2,
+        'packages': [
+          for (final name in ['app', 'fonts'])
+            {
+              'name': name,
+              'rootUri': Directory(p.join(root, name)).uri.toString(),
+              'packageUri': 'lib/',
+            },
+        ],
+      });
+      final output = await remapSources(config, p.join(root, 'module'), {
+        'app',
+        'fonts',
+      }, 4);
+      expect((output['names'] as Map)['fonts'], 'patch.4.fonts');
+      expect(
+        await File(p.join(root, 'module/app/main.dart')).readAsString(),
+        contains('package:patch.4.fonts/fonts.dart'),
+      );
+      expect(await Directory(p.join(root, 'module/fonts')).exists(), isTrue);
+    },
+  );
   test('native package provenance sees changes outside Dart sources', () async {
     final root = (await Directory.systemTemp.createTemp('patch-native-')).path;
     await File(
